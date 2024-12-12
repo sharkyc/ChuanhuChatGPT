@@ -1,6 +1,7 @@
 
 var updateInfoGotten = false;
-var isLatestVersion = localStorage.getItem('isLatestVersion') || false;
+var isLatestVersion = localStorage.getItem('isLatestVersion') === "true" || false;
+var shouldCheckUpdate = false;
 
 function setUpdater() {
     const enableCheckUpdate = gradioApp().querySelector('#enableCheckUpdate_config').innerText;
@@ -10,25 +11,30 @@ function setUpdater() {
         return;
     }
 
-    const lastCheckTime = localStorage.getItem('lastCheckTime') || 0;
-    const longTimeNoCheck = currentTime - lastCheckTime > 3 * 24 * 60 * 60 * 1000;
-    if (longTimeNoCheck && !updateInfoGotten && !isLatestVersion || isLatestVersion && !updateInfoGotten) {
-        updateLatestVersion();
+    if (!isLatestVersion) {
+        gradioApp().classList.add('is-outdated');
     }
+    const lastCheckTime = localStorage.getItem('lastCheckTime') || 0;
+    currentTime = new Date().getTime();
+    const longTimeNoCheck = currentTime - lastCheckTime > 3 * 24 * 60 * 60 * 1000;
+    shouldCheckUpdate = !updateInfoGotten && (!isLatestVersion && longTimeNoCheck || isLatestVersion);
+    // console.log(`shouldCheckUpdate`, shouldCheckUpdate);
+    if (shouldCheckUpdate) updateLatestVersion();
 }
 
 var statusObserver = new MutationObserver(function (mutationsList) {
     for (const mutation of mutationsList) {
         if (mutation.type === 'attributes' || mutation.type === 'childList') {
-            if (statusDisplay.innerHTML.includes('<span id="update-status"')) {
+            if (statusDisplay.innerHTML.includes('id="update-status"')) {
                 if (getUpdateStatus() === "success") {
-                    updatingInfoElement.innerText = i18n(updateSuccess_i18n);
-                    noUpdateHtml();
+                    // noUpdateHtml();
+                    updateSuccessHtml();
                     localStorage.setItem('isLatestVersion', 'true');
                     isLatestVersion = true;
+                    gradioApp().classList.remove('is-outdated');
                     enableUpdateBtns();
                 } else if (getUpdateStatus() === "failure") {
-                    updatingInfoElement.innerHTML = i18n(updateFailure_i18n);
+                    updatingInfoElement.innerHTML = marked.parse(updateFailure_i18n, {mangle: false, headerIds: false});
                     disableUpdateBtn_enableCancelBtn();
                 } else if (getUpdateStatus() != "") {
                     updatingInfoElement.innerText = getUpdateStatus();
@@ -86,11 +92,16 @@ async function updateLatestVersion() {
         if (currentVersion) {
             if (latestVersion <= currentVersion) {
                 noUpdate();
+                localStorage.setItem('isLatestVersion', 'true');
+                isLatestVersion = true;
+                gradioApp().classList.remove('is-outdated');
             } else {
                 latestVersionElement.textContent = latestVersion;
                 console.log(`New version ${latestVersion} found!`);
                 if (!isInIframe) openUpdateToast();
                 gradioApp().classList.add('is-outdated');
+                localStorage.setItem('isLatestVersion', 'false');
+                isLatestVersion = false;
             }
             enableUpdateBtns();
         } else { //如果当前版本号获取失败，使用时间比较
@@ -119,6 +130,8 @@ async function updateLatestVersion() {
                     noUpdate("Local version check failed, it seems to be a local rivision. <br>But your revision is newer than the latest release.");
                     gradioApp().classList.add('is-outdated');
                     enableUpdateBtns()
+                    localStorage.setItem('isLatestVersion', 'false');
+                    isLatestVersion = false;
                 }
             }
         }
@@ -173,6 +186,14 @@ function manualCheckUpdate() {
     updateLatestVersion();
     currentTime = new Date().getTime();
     localStorage.setItem('lastCheckTime', currentTime);
+}
+
+function updateSuccessHtml() {
+    updatingInfoElement.innerText = i18n(updateSuccess_i18n);
+    const gotoUpdateBtn = document.getElementById('goto-update-btn');
+    const successUpdateBtn = document.getElementById('success-update-btn');
+    gotoUpdateBtn.classList.add('hideK');
+    successUpdateBtn.classList.remove('hideK');
 }
 function noUpdate(message="") {
     localStorage.setItem('isLatestVersion', 'true');

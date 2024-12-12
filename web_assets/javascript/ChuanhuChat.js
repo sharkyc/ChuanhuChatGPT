@@ -15,7 +15,10 @@ var chatbotArea = null;
 var chatbot = null;
 var chatbotIndicator = null;
 var uploaderIndicator = null;
+var uploaderIndicator2 = null;
 var chatListIndicator = null;
+var modelSelectIndicator = null;
+
 var chatbotWrap = null;
 var apSwitch = null;
 var messageBotDivs = null;
@@ -24,9 +27,11 @@ var logginUser = null;
 var updateToast = null;
 var sendBtn = null;
 var cancelBtn = null;
-var sliders = null;
+// var sliders = null;
 var updateChuanhuBtn = null;
+var rebootChuanhuBtn = null;
 var statusDisplay = null;
+var grModelDescDiv = null;
 
 var historySelector = null;
 var chuanhuPopup = null;
@@ -45,10 +50,12 @@ let windowWidth = window.innerWidth; // 初始窗口宽度
 
 function addInit() {
     var needInit = {chatbotIndicator, uploaderIndicator};
-    
+
     chatbotIndicator = gradioApp().querySelector('#chuanhu-chatbot > div.wrap');
     uploaderIndicator = gradioApp().querySelector('#upload-index-file > div.wrap');
+    uploaderIndicator2 = gradioApp().querySelector('#upload-index-file');
     chatListIndicator = gradioApp().querySelector('#history-select-dropdown > div.wrap');
+    modelSelectIndicator = gradioApp().querySelector('#gr-model-description > div.wrap');
 
     for (let elem in needInit) {
         if (needInit[elem] == null) {
@@ -59,8 +66,10 @@ function addInit() {
 
     chatbotObserver.observe(chatbotIndicator, { attributes: true, childList: true, subtree: true });
     chatListObserver.observe(chatListIndicator, { attributes: true });
+    modelSelectObserver.observe(modelSelectIndicator, { attributes: true });
     setUploader();
-    
+    setPasteUploader();
+    setDragUploader();
     return true;
 }
 
@@ -74,13 +83,14 @@ function initialize() {
     appTitleDiv = gradioApp().getElementById("app-title");
     chatbotArea = gradioApp().querySelector('#chatbot-area');
     chatbot = gradioApp().querySelector('#chuanhu-chatbot');
-    chatbotWrap = gradioApp().querySelector('#chuanhu-chatbot > .wrapper > .wrap');
+    chatbotWrap = gradioApp().querySelector('#chuanhu-chatbot > .wrapper > .bubble-wrap');
     apSwitch = gradioApp().querySelector('.apSwitch input[type="checkbox"]');
     updateToast = gradioApp().querySelector("#toast-update");
     sendBtn = gradioApp().getElementById("submit-btn");
     cancelBtn = gradioApp().getElementById("cancel-btn");
-    sliders = gradioApp().querySelectorAll('input[type="range"]');
+    // sliders = gradioApp().querySelectorAll('input[type="range"]');
     updateChuanhuBtn = gradioApp().getElementById("update-chuanhu-btn");
+    rebootChuanhuBtn = gradioApp().getElementById("reboot-chuanhu-btn");
     statusDisplay = gradioApp().querySelector('#status-display');
 
     historySelector = gradioApp().querySelector('#history-select-dropdown');
@@ -91,6 +101,7 @@ function initialize() {
     chuanhuHeader = gradioApp().querySelector('#chuanhu-header');
     menu = gradioApp().querySelector('#menu-area');
     toolbox = gradioApp().querySelector('#toolbox-area');
+    grModelDescDiv = gradioApp().querySelector('#gr-model-description');
     // trainBody = gradioApp().querySelector('#train-body');
 
     // if (loginUserForm) {
@@ -106,9 +117,11 @@ function initialize() {
     selectHistory();
     // setChatbotHeight();
     setPopupBoxPosition();
-    setSlider();
+    // setSlider();
     setCheckboxes();
+    setAutocomplete();
     checkModel();
+    bindChatbotPlaceholderButtons();
 
     settingBox.classList.add('hideBox');
     trainingBox.classList.add('hideBox');
@@ -124,7 +137,7 @@ function initialize() {
     // setHistroyPanel();
     // trainBody.classList.add('hide-body');
 
-    
+
 
     return true;
 }
@@ -211,9 +224,10 @@ function checkModel() {
     var modelValue = model.value;
     checkGPT();
     checkXMChat();
+    checkDescription();
     function checkGPT() {
         modelValue = model.value;
-        if (modelValue.includes('gpt')) {
+        if (modelValue.toLowerCase().includes('gpt')) {
             gradioApp().querySelector('#header-btn-groups').classList.add('is-gpt');
         } else {
             gradioApp().querySelector('#header-btn-groups').classList.remove('is-gpt');
@@ -228,12 +242,46 @@ function checkModel() {
             chatbotArea.classList.remove('is-xmchat');
         }
     }
+    function checkDescription() {
+        modelValue = model.value;
+        let grModelDesc = grModelDescDiv.innerText;
+        let modelDesc = gradioApp().querySelector('#model-description p');
+        if (grModelDesc && !grModelDesc.includes('0.0s') && !grModelDesc.includes('processing') && grModelDesc.trim() !== "") {
+            chatbotArea.classList.add('has-description');
+            modelDesc.innerText = grModelDesc;
+        } else {
+            chatbotArea.classList.remove('has-description');
+            modelDesc.innerText = "No Description Found!";
+        }
+    }
+    // model.addEventListener('blur', ()=>{
+    //     setTimeout(()=>{
+    //         checkGPT();
+    //         checkXMChat();
+    //         checkDescription();
+    //     }, 100);
+    // });
+}
 
-    model.addEventListener('blur', ()=>{
-        setTimeout(()=>{
-            checkGPT();
-            checkXMChat();
-        }, 100);
+function bindChatbotPlaceholderButtons() {
+    document.querySelectorAll('#chatbot-placeholder-options button').forEach(button => {
+        button.addEventListener('click', function () {
+            // 获取按钮的文本
+            const buttonText = this.textContent || this.innerText;
+
+            user_input_ta = user_input_tb.querySelector("textarea");
+            // 设置输入框的值
+            user_input_ta.value = buttonText;
+
+            input_event = new InputEvent("input", { bubbles: true, cancelable: true });
+            user_input_ta.dispatchEvent(input_event);
+
+            // 创建并触发回车键事件
+            sendBtn.disabled = false;
+            sendBtn.click();
+            // const enterEvent = new KeyboardEvent('keydown', { 'key': 'Enter' });
+            // userInput.dispatchEvent(enterEvent);
+        });
     });
 }
 
@@ -266,7 +314,7 @@ function btnToggleDarkMode() {
 }
 
 function setScrollShadow() {
-    const toolboxScroll = toolbox.querySelector('#toolbox-area > .gradio-box > .gradio-tabs > div.tab-nav');
+    const toolboxScroll = toolbox.querySelector('#toolbox-area > .gradio-group > div.styler > .gradio-tabs > div.tab-nav');
     const toolboxTabs = toolboxScroll.querySelectorAll('button');
     let toolboxScrollWidth = 0;
     toolboxTabs.forEach((tab) => {
@@ -302,10 +350,10 @@ function setPopupBoxPosition() {
     // chuanhuPopup.style.top = `${(screenHeight - popupBoxHeight) / 2}px`;
 }
 
-function updateVH() {
-    const vh = window.innerHeight * 0.01;
-    document.documentElement.style.setProperty('--vh', `${vh}px`);
-}
+// function updateVH() {
+//     const vh = window.innerHeight * 0.01;
+//     document.documentElement.style.setProperty('--vh', `${vh}px`);
+// }
 
 function setChatbotHeight() {
     return;
@@ -335,28 +383,41 @@ function setChatbotScroll() {
     chatbotWrap.scrollTo(0,scrollHeight)
 }
 
-function clearChatbot() {
+function setAutocomplete() {
+    // 避免API Key被当成密码导致的模型下拉框被当成用户名而引发的浏览器自动填充行为
+    const apiKeyInput = gradioApp().querySelector("#api-key input");
+    apiKeyInput.setAttribute("autocomplete", "new-password");
+}
+
+function clearChatbot(a, b) {
     clearHistoryHtml();
     // clearMessageRows();
+    return [a, b]
 }
 
 function chatbotContentChanged(attempt = 1, force = false) {
+    // console.log('chatbotContentChanged');
     for (var i = 0; i < attempt; i++) {
         setTimeout(() => {
             // clearMessageRows();
             saveHistoryHtml();
             disableSendBtn();
+            disableChatListClick(); // 避免生成中切换对话导致错误
+            // updateSlider();
+            updateCheckboxes();
+            bindFancyBox();
 
             gradioApp().querySelectorAll('#chuanhu-chatbot .message-wrap .message.bot').forEach(addChuanhuButton);
 
             if (chatbotIndicator.classList.contains('hide')) { // generation finished
                 setLatestMessage();
+                enableChatListClick();
                 setChatList();
             }
 
             if (!chatbotIndicator.classList.contains('translucent')) { // message deleted
                 var checkLatestAdded = setInterval(() => {
-                    var latestMessageNow = gradioApp().querySelector('#chuanhu-chatbot > .wrapper > .wrap > .message-wrap .message.bot.latest');
+                    var latestMessageNow = gradioApp().querySelector('#chuanhu-chatbot .message-wrap .message.bot:last-of-type');
                     if (latestMessageNow && latestMessageNow.querySelector('.message-btn-row')) {
                         clearInterval(checkLatestAdded);
                     } else {
@@ -364,8 +425,8 @@ function chatbotContentChanged(attempt = 1, force = false) {
                     }
                 }, 200);
             }
-        
-            
+            bindChatbotPlaceholderButtons();
+
         }, i === 0 ? 0 : 200);
     }
     // 理论上是不需要多次尝试执行的，可惜gradio的bug导致message可能没有渲染完毕，所以尝试500ms后再次执行
@@ -387,6 +448,10 @@ var chatListObserver = new MutationObserver(() => {
     setChatList();
 });
 
+var modelSelectObserver = new MutationObserver(() => {
+    checkModel();
+});
+
 // 监视页面内部 DOM 变动
 var gradioObserver = new MutationObserver(function (mutations) {
     for (var i = 0; i < mutations.length; i++) {
@@ -402,7 +467,7 @@ var gradioObserver = new MutationObserver(function (mutations) {
 // 监视页面变化
 window.addEventListener("DOMContentLoaded", function () {
     // const ga = document.getElementsByTagName("gradio-app");
-    updateVH();
+    // updateVH();
     windowWidth = window.innerWidth;
     gradioApp().addEventListener("render", initialize);
     isInIframe = (window.self !== window.top);
@@ -410,13 +475,13 @@ window.addEventListener("DOMContentLoaded", function () {
 });
 window.addEventListener('resize', ()=>{
     // setChatbotHeight();
-    updateVH();
+    // updateVH();
     windowWidth = window.innerWidth;
     setPopupBoxPosition();
-    adjustSide(); 
+    adjustSide();
 });
 window.addEventListener('orientationchange', (event) => {
-    updateVH();
+    // updateVH();
     windowWidth = window.innerWidth;
     setPopupBoxPosition();
     adjustSide();
@@ -440,18 +505,18 @@ function makeML(str) {
     return l
 }
 let ChuanhuInfo = function () {
-    /* 
-   ________                      __             ________          __ 
+    /*
+   ________                      __             ________          __
   / ____/ /_  __  ______ _____  / /_  __  __   / ____/ /_  ____ _/ /_
  / /   / __ \/ / / / __ `/ __ \/ __ \/ / / /  / /   / __ \/ __ `/ __/
-/ /___/ / / / /_/ / /_/ / / / / / / / /_/ /  / /___/ / / / /_/ / /_  
-\____/_/ /_/\__,_/\__,_/_/ /_/_/ /_/\__,_/   \____/_/ /_/\__,_/\__/  
-                                                                     
+/ /___/ / / / /_/ / /_/ / / / / / / / /_/ /  / /___/ / / / /_/ / /_
+\____/_/ /_/\__,_/\__,_/_/ /_/_/ /_/\__,_/   \____/_/ /_/\__,_/\__/
+
    川虎Chat (Chuanhu Chat) - GUI for ChatGPT API and many LLMs
  */
 }
 let description = `
-© 2023 Chuanhu, MZhao, Keldos
+© 2023 - 2024 Chuanhu, MZhao, Keldos
 GitHub repository: [https://github.com/GaiZhenbiao/ChuanhuChatGPT]\n
 Enjoy our project!\n
 `

@@ -1,5 +1,5 @@
-
 var currentChatName = null;
+var isChatListRecentlyEnabled = false;
 
 function setChatListHeader() {
     var grHistoryRefreshBtn = gradioApp().querySelector('button#gr-history-refresh-btn');
@@ -8,25 +8,21 @@ function setChatListHeader() {
     grHistoryRefreshBtn.className = "";
     grHistoryUploadBtn.className = "";
 
-
     grHistoryRefreshBtn.innerHTML = HistoryRefreshIcon;
     grHistoryUploadBtn.innerHTML = HistoryUploadIcon;
 }
 
 function setChatList() {
+    exportBtnCheck();
     var selectedChat = null;
     var chatList = gradioApp().querySelector('fieldset#history-select-dropdown');
-    selectedChat = chatList.querySelector(".wrap label.selected")
+    selectedChat = chatList.querySelector("label.selected");
     if (!selectedChat) {
         currentChatName = null;
         return;
     }
 
-    // if (userLogged) {
-    //     currentChatName = username + "/" + selectedChat.querySelector('span').innerText;
-    // } else {
-        currentChatName = selectedChat.querySelector('span').innerText;
-    // }
+    currentChatName = selectedChat.querySelector('span').innerText;
 
     if (selectedChat.classList.contains('added-chat-btns')) {
         return;
@@ -54,6 +50,37 @@ function setChatList() {
     return;
 }
 
+function disableChatListClick() {
+    var chatList = gradioApp().querySelector('fieldset#history-select-dropdown');
+    if (chatList.querySelector('label').style.pointerEvents !== 'none' && !isChatListRecentlyEnabled) {
+        chatList.querySelectorAll('label').forEach(label => {
+            label.style.transition = 'opacity 0.1s ease';
+            label.style.pointerEvents = 'none';
+            label.style.opacity = '0.72';
+        });
+    }
+}
+function enableChatListClick() {
+    var chatList = gradioApp().querySelector('fieldset#history-select-dropdown');
+    if (chatList.querySelector('label').style.pointerEvents !== 'auto') {
+        chatList.querySelectorAll('label').forEach(label => {
+            label.style.transition = 'opacity 0.2s ease';
+            label.style.pointerEvents = 'auto';
+            label.style.opacity = '1';
+        });
+        isChatListRecentlyEnabled = true;
+        setTimeout(() => {
+            isChatListRecentlyEnabled = false;
+        }, 500); // 避免短时间内多次调用造成闪烁
+    }
+}
+
+function exportBtnCheck() {
+    var grHistoryExportBtn = gradioApp().querySelector('#gr-history-download-json-btn');
+    var exportBtn = gradioApp().querySelector('#export-chat-btn');
+    exportBtn.disabled = grHistoryExportBtn.disabled;
+    exportBtn.classList.toggle('disabled', grHistoryExportBtn.disabled);
+}
 
 function saveChatHistory(a, b, c, d) {
     var fileName = b;

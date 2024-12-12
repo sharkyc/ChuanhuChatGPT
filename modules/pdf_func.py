@@ -61,7 +61,7 @@ def get_title_with_cropped_page(first_page):
         elif word.text == "Abstract": # 获取页面abstract
             top = word.top
 
-    user_info = [i["text"] for i in extract_words(first_page.within_bbox((x0,title_bottom,x1,top)))]
+    user_info = [i["text"] for i in extract_words(first_page.within_bbox((x0,title_bottom,x1,bottom)))]
     # 裁剪掉上半部分, within_bbox: full_included; crop: partial_included
     return title, user_info, first_page.within_bbox((x0,top,x1,bottom))
 
@@ -145,36 +145,10 @@ def parse_pdf(filename, two_column = True):
     logging.getLogger().setLevel(level)
     return Document(page_content=text, metadata={"title": title})
 
-BASE_POINTS = """
-1. Who are the authors?
-2. What is the process of the proposed method?
-3. What is the performance of the proposed method? Please note down its performance metrics.
-4. What are the baseline models and their performances? Please note down these baseline methods.
-5. What dataset did this paper use?
-"""
-
-READING_PROMPT = """
-You are a researcher helper bot. You can help the user with research paper reading and summarizing. \n
-Now I am going to send you a paper. You need to read it and summarize it for me part by part. \n
-When you are reading, You need to focus on these key points:{}
-"""
-
-READING_PROMT_V2 = """
-You are a researcher helper bot. You can help the user with research paper reading and summarizing. \n
-Now I am going to send you a paper. You need to read it and summarize it for me part by part. \n
-When you are reading, You need to focus on these key points:{},
-
-And You need to generate a brief but informative title for this part.
-Your return format:
-- title: '...'
-- summary: '...'
-"""
-
-SUMMARY_PROMPT = "You are a researcher helper bot. Now you need to read the summaries of a research paper."
-
 
 if __name__ == '__main__':
     # Test code
     z = parse_pdf("./build/test.pdf")
     print(z["user_info"])
     print(z["title"])
+

@@ -39,10 +39,14 @@ function showMask(obj) {
         chatbotArea.querySelector('#chatbot-input-more-area').parentNode.appendChild(mask);
     } else if (obj == "update-toast") {
         mask.classList.add('chuanhu-top-mask');
+        if (document.querySelector('.chuanhu-top-mask')) {
+            for (var i = 0; i < document.querySelectorAll('.chuanhu-top-mask').length; i++) {
+                document.querySelectorAll('.chuanhu-top-mask')[i].remove();
+            }
+        }
         document.body.appendChild(mask);
         // mask.classList.add('transparent-mask');
     }
-    
     
 
     mask.addEventListener('click', () => {
@@ -252,6 +256,32 @@ function checkChatMoreMask() {
         chatbotArea.querySelector('.chuanhu-mask')?.remove();
         chatbotArea.classList.remove('show-chat-more');
     }
+}
+
+function showKnowledgeBase(){
+    if (!toolboxOpening) {
+        toolboxClick();
+    }
+    switchToolBoxTab(0);
+    let knoledgeBaseAccordion = gradioApp().querySelector('#gr-kb-accordion');
+    let knoledgeBase = knoledgeBaseAccordion.querySelector('#upload-index-file');
+    if (knoledgeBase.parentElement.parentElement.style.display == 'none') {
+        knoledgeBaseAccordion.querySelector('.label-wrap')?.click();
+    }
+    // 将 knoledgeBase 滚动到可见区域
+    setTimeout(() => {knoledgeBaseAccordion.scrollIntoView({ behavior: "smooth"}); }, 100);
+    letThisSparkle(knoledgeBase, 5000);
+}
+
+function letThisSparkle(element, sparkleTime = 3000) {
+    element.classList.add('chuanhu-sparkle');
+    setTimeout(() => {element.classList.remove('chuanhu-sparkle');}, sparkleTime);
+}
+
+function switchToolBoxTab(tabIndex) {
+    let tabButtons = gradioApp().querySelectorAll('#chuanhu-toolbox-tabs .tab-nav > button');
+    let tab = tabButtons[tabIndex];
+    tab.click();
 }
 
 /*
